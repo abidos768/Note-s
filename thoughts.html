@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أفكاري</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0f0f0f; --surface:#1a1a1a; --border:#2a2a2a;
+  --text:#e8e8e8; --muted:#666;
+  --red:#e05555; --yellow:#d4a017; --green:#4a9e6b;
+  --red-dim:rgba(224,85,85,0.12); --yellow-dim:rgba(212,160,23,0.12); --green-dim:rgba(74,158,107,0.12);
+}
+body { font-family:'IBM Plex Sans Arabic',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:20px 16px 60px; }
+
+/* HEADER */
+.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+h1 { font-size:1.1rem; font-weight:300; color:var(--muted); letter-spacing:0.05em; }
+.view-toggle { display:flex; gap:6px; }
+.vbtn { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:5px 12px; font-family:inherit; font-size:0.75rem; color:var(--muted); cursor:pointer; transition:all 0.15s; }
+.vbtn.active { color:var(--text); border-color:#444; background:#222; }
+
+/* FORM */
+.add-form { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px; }
+.dump-area { width:100%; background:transparent; border:none; color:var(--text); font-family:inherit; font-size:1rem; font-weight:300; resize:none; outline:none; line-height:1.6; min-height:56px; }
+.dump-area::placeholder { color:var(--muted); }
+.form-divider { height:1px; background:var(--border); margin:10px 0; }
+.summary-input { width:100%; background:transparent; border:none; color:var(--text); font-family:inherit; font-size:0.85rem; outline:none; opacity:0.7; }
+.summary-input::placeholder { color:var(--muted); }
+.form-section-label { font-size:0.7rem; color:var(--muted); margin-bottom:5px; }
+.group-pills { display:flex; gap:5px; flex-wrap:wrap; min-height:4px; }
+.group-pill { font-size:0.7rem; background:var(--border); color:var(--muted); border-radius:4px; padding:3px 8px; cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
+.group-pill.selected { border-color:#555; color:var(--text); }
+.form-footer { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.color-pick { display:flex; gap:7px; }
+.color-dot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform 0.15s,border-color 0.15s; flex-shrink:0; }
+.color-dot:hover { transform:scale(1.2); }
+.color-dot.active { border-color:white; transform:scale(1.15); }
+.color-dot.red { background:var(--red); }
+.color-dot.yellow { background:var(--yellow); }
+.color-dot.green { background:var(--green); }
+.tag-input { background:var(--border); border:none; border-radius:6px; padding:5px 9px; color:var(--text); font-family:inherit; font-size:0.78rem; outline:none; width:100px; }
+.tag-input::placeholder { color:var(--muted); }
+.save-btn { background:var(--text); color:var(--bg); border:none; border-radius:8px; padding:6px 16px; font-family:inherit; font-size:0.83rem; cursor:pointer; transition:opacity 0.15s; margin-right:auto; }
+.save-btn:hover { opacity:0.85; }
+
+/* MANAGE GROUPS */
+.section-toggle { font-size:0.72rem; color:var(--muted); cursor:pointer; background:none; border:none; font-family:inherit; padding:0; margin-bottom:10px; display:block; transition:color 0.15s; }
+.section-toggle:hover { color:var(--text); }
+.manage-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; margin-bottom:16px; }
+.manage-title { font-size:0.73rem; color:var(--muted); margin-bottom:9px; }
+.new-group-row { display:flex; gap:8px; }
+.new-group-input { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text); font-family:inherit; font-size:0.8rem; outline:none; }
+.new-group-input::placeholder { color:var(--muted); }
+.add-group-btn { background:var(--border); color:var(--text); border:none; border-radius:6px; padding:6px 14px; font-family:inherit; font-size:0.8rem; cursor:pointer; transition:background 0.15s; }
+.add-group-btn:hover { background:#3a3a3a; }
+.groups-list { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+.gmp { font-size:0.72rem; color:var(--muted); background:var(--border); border-radius:4px; padding:3px 8px; display:flex; align-items:center; gap:5px; }
+.del-g { cursor:pointer; opacity:0.4; font-size:0.65rem; transition:opacity 0.15s; }
+.del-g:hover { opacity:1; color:var(--red); }
+
+/* FILTERS (list view) */
+.filters { display:flex; gap:7px; margin-bottom:9px; flex-wrap:wrap; }
+.filter-btn { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:4px 13px; font-family:inherit; font-size:0.76rem; color:var(--muted); cursor:pointer; transition:all 0.15s; }
+.filter-btn:hover { color:var(--text); }
+.filter-btn.active { color:var(--text); border-color:#444; background:#222; }
+.filter-row { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:9px; min-height:4px; }
+.chip { font-size:0.7rem; color:var(--muted); background:var(--border); border-radius:4px; padding:3px 7px; cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
+.chip.active { border-color:#555; color:var(--text); }
+
+/* LIST VIEW CARDS */
+.cards { display:flex; flex-direction:column; gap:10px; }
+.card { background:var(--surface); border:1px solid var(--border); border-right:3px solid transparent; border-radius:10px; padding:12px 14px; transition:all 0.2s; }
+.card.red    { border-right-color:var(--red);    background:linear-gradient(135deg,var(--surface),var(--red-dim)); }
+.card.yellow { border-right-color:var(--yellow); background:linear-gradient(135deg,var(--surface),var(--yellow-dim)); }
+.card.green  { border-right-color:var(--green);  background:linear-gradient(135deg,var(--surface),var(--green-dim)); }
+.card.dragging { opacity:0.4; }
+.card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.card-summary { font-size:0.93rem; font-weight:400; line-height:1.5; flex:1; }
+.ccp { display:flex; gap:5px; flex-shrink:0; margin-top:3px; }
+.ccd { width:12px; height:12px; border-radius:50%; cursor:pointer; border:1.5px solid transparent; transition:transform 0.12s,border-color 0.12s,opacity 0.12s; opacity:0.35; }
+.ccd:hover { transform:scale(1.2); opacity:1; }
+.ccd.active { border-color:white; opacity:1; }
+.ccd.red { background:var(--red); }
+.ccd.yellow { background:var(--yellow); }
+.ccd.green { background:var(--green); }
+.card-dump { font-size:0.78rem; color:var(--muted); line-height:1.6; margin-top:5px; display:none; }
+.card-dump.visible { display:block; }
+.card-meta { display:flex; gap:5px; flex-wrap:wrap; margin-top:7px; }
+.tag  { font-size:0.68rem; color:var(--muted); background:var(--border); border-radius:4px; padding:2px 6px; }
+.gbadge { font-size:0.68rem; color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:2px 6px; cursor:pointer; transition:all 0.15s; }
+.gbadge:hover { border-color:#555; color:var(--red); }
+.card-actions { display:flex; gap:9px; margin-top:9px; align-items:center; }
+.toggle-btn { font-size:0.73rem; color:var(--muted); cursor:pointer; background:none; border:none; font-family:inherit; padding:0; transition:color 0.15s; }
+.toggle-btn:hover { color:var(--text); }
+.delete-btn { font-size:0.7rem; color:#3a3a3a; cursor:pointer; background:none; border:none; font-family:inherit; padding:0; margin-right:auto; transition:color 0.15s; }
+.delete-btn:hover { color:var(--red); }
+.expand-area { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:inherit; font-size:0.78rem; padding:9px; margin-top:9px; resize:none; outline:none; line-height:1.6; display:none; min-height:75px; }
+.expand-area.visible { display:block; }
+.expand-area::placeholder { color:var(--muted); }
+.empty { color:var(--muted); font-size:0.83rem; text-align:center; margin-top:36px; }
+
+/* ── BOARD VIEW ── */
+#boardView { display:none; overflow-x:auto; padding-bottom:12px; }
+.board { display:flex; gap:14px; align-items:flex-start; min-width:max-content; }
+
+.column {
+  width:240px; flex-shrink:0;
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; transition:opacity 0.2s;
+}
+.col-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer;
+  user-select:none;
+}
+.col-title { font-size:0.83rem; font-weight:400; }
+.col-count { font-size:0.7rem; color:var(--muted); }
+.col-toggle { font-size:0.7rem; color:var(--muted); transition:transform 0.2s; }
+.col-toggle.collapsed { transform:rotate(-90deg); }
+
+.col-body {
+  padding:10px; display:flex; flex-direction:column; gap:8px;
+  min-height:60px; transition:all 0.2s;
+}
+.col-body.collapsed { display:none; }
+
+/* drop zone highlight */
+.col-body.drag-over {
+  background:rgba(255,255,255,0.04);
+  outline:1px dashed #444;
+  border-radius:6px;
+}
+
+/* board cards */
+.bcard {
+  background:var(--bg); border:1px solid var(--border);
+  border-right:3px solid transparent;
+  border-radius:8px; padding:10px 12px;
+  cursor:grab; transition:opacity 0.15s, box-shadow 0.15s;
+  user-select:none;
+}
+.bcard:active { cursor:grabbing; }
+.bcard.red    { border-right-color:var(--red); }
+.bcard.yellow { border-right-color:var(--yellow); }
+.bcard.green  { border-right-color:var(--green); }
+.bcard.dragging { opacity:0.3; }
+.bcard-summary { font-size:0.82rem; line-height:1.45; }
+.bcard-meta { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+.bcard-ccp { display:flex; gap:4px; margin-top:6px; }
+
+/* ungrouped column */
+.col-ungrouped .col-header { border-bottom-color:#333; }
+
+.no-groups-msg { color:var(--muted); font-size:0.8rem; text-align:center; padding:20px 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>أفكاري</h1>
+  <div class="view-toggle">
+    <button class="vbtn active" id="btnList" onclick="switchView('list')">قائمة</button>
+    <button class="vbtn" id="btnBoard" onclick="switchView('board')">لوحة</button>
+  </div>
+</div>
+
+<!-- FORM -->
+<div class="add-form">
+  <textarea class="dump-area" id="dumpInput" placeholder="اكتب أي شيء..." rows="2"></textarea>
+  <div class="form-divider"></div>
+  <input class="summary-input" id="summaryInput" placeholder="اختصار (اختياري)">
+  <div class="form-divider"></div>
+  <div class="form-section-label">مجموعات</div>
+  <div class="group-pills" id="formGroupPills"></div>
+  <div class="form-footer">
+    <div class="color-pick">
+      <div class="color-dot red active" data-color="red" onclick="selectColor(this)"></div>
+      <div class="color-dot yellow" data-color="yellow" onclick="selectColor(this)"></div>
+      <div class="color-dot green" data-color="green" onclick="selectColor(this)"></div>
+    </div>
+    <input class="tag-input" id="tagInput" placeholder="#tag">
+    <button class="save-btn" onclick="saveThought()">حفظ</button>
+  </div>
+</div>
+
+<button class="section-toggle" onclick="toggleManageGroups()">＋ إدارة المجموعات</button>
+<div class="manage-box" id="manageGroups" style="display:none">
+  <div class="manage-title">المجموعات</div>
+  <div class="new-group-row">
+    <input class="new-group-input" id="newGroupInput" placeholder="اسم المجموعة">
+    <button class="add-group-btn" onclick="addGroup()">أضف</button>
+  </div>
+  <div class="groups-list" id="groupsList"></div>
+</div>
+
+<!-- LIST VIEW -->
+<div id="listView">
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all" onclick="setColorFilter(this)">الكل</button>
+    <button class="filter-btn" data-filter="red" onclick="setColorFilter(this)">🔴</button>
+    <button class="filter-btn" data-filter="yellow" onclick="setColorFilter(this)">🟡</button>
+    <button class="filter-btn" data-filter="green" onclick="setColorFilter(this)">🟢</button>
+  </div>
+  <div class="filter-row" id="groupFilters"></div>
+  <div class="filter-row" id="tagFilters"></div>
+  <div class="cards" id="cardsContainer"></div>
+  <div class="empty" id="emptyMsg" style="display:none">لا توجد أفكار</div>
+</div>
+
+<!-- BOARD VIEW -->
+<div id="boardView">
+  <div class="board" id="boardContainer"></div>
+</div>
+
+<script>
+let thoughts      = JSON.parse(localStorage.getItem('thoughts2') || '[]');
+let groups        = JSON.parse(localStorage.getItem('groups2')   || '[]');
+let collapsedCols = JSON.parse(localStorage.getItem('collapsed') || '[]');
+let selectedColor = 'red';
+let selectedGroups= [];
+let activeFilter  = 'all';
+let activeTag     = null;
+let activeGroup   = null;
+let currentView   = 'list';
+let dragId        = null;
+
+function save() {
+  localStorage.setItem('thoughts2', JSON.stringify(thoughts));
+  localStorage.setItem('groups2',   JSON.stringify(groups));
+  localStorage.setItem('collapsed', JSON.stringify(collapsedCols));
+}
+
+/* VIEW SWITCH */
+function switchView(v) {
+  currentView = v;
+  document.getElementById('listView').style.display  = v==='list'  ? 'block' : 'none';
+  document.getElementById('boardView').style.display = v==='board' ? 'block' : 'none';
+  document.getElementById('btnList').classList.toggle('active',  v==='list');
+  document.getElementById('btnBoard').classList.toggle('active', v==='board');
+  if (v==='board') renderBoard(); else render();
+}
+
+/* COLOR FORM */
+function selectColor(el) {
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+  selectedColor = el.dataset.color;
+}
+
+/* COLOR CARD */
+function changeCardColor(id, color) {
+  const t=thoughts.find(t=>t.id===id);
+  if(t){t.color=color; save(); currentView==='board'?renderBoard():render();}
+}
+
+/* GROUPS MANAGE */
+function toggleManageGroups() {
+  const el=document.getElementById('manageGroups');
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+function addGroup() {
+  const input=document.getElementById('newGroupInput');
+  const name=input.value.trim();
+  if(!name||groups.includes(name)) return;
+  groups.push(name); save(); input.value='';
+  renderGroupsManage(); renderFormGroupPills(); renderGroupFilters();
+  if(currentView==='board') renderBoard();
+}
+function deleteGroup(name) {
+  groups=groups.filter(g=>g!==name);
+  thoughts.forEach(t=>{t.groups=(t.groups||[]).filter(g=>g!==name);});
+  save();
+  renderGroupsManage(); renderFormGroupPills(); renderGroupFilters();
+  currentView==='board'?renderBoard():render();
+}
+function renderGroupsManage() {
+  const el=document.getElementById('groupsList');
+  if(!groups.length){el.innerHTML='<span style="font-size:0.75rem;color:var(--muted)">لا توجد مجموعات</span>';return;}
+  el.innerHTML=groups.map(g=>`<span class="gmp">${esc(g)}<span class="del-g" onclick="deleteGroup('${ea(g)}')">✕</span></span>`).join('');
+}
+function renderFormGroupPills() {
+  const el=document.getElementById('formGroupPills');
+  if(!groups.length){el.innerHTML='<span style="font-size:0.7rem;color:var(--muted)">أضف مجموعات أولاً ↑</span>';return;}
+  el.innerHTML=groups.map(g=>`<span class="group-pill ${selectedGroups.includes(g)?'selected':''}" onclick="toggleFormGroup('${ea(g)}')">${esc(g)}</span>`).join('');
+}
+function toggleFormGroup(name) {
+  selectedGroups=selectedGroups.includes(name)?selectedGroups.filter(g=>g!==name):[...selectedGroups,name];
+  renderFormGroupPills();
+}
+
+/* REMOVE GROUP FROM CARD */
+function removeGroupFromCard(id, groupName) {
+  const t=thoughts.find(t=>t.id===id);
+  if(t){t.groups=(t.groups||[]).filter(g=>g!==groupName);save();currentView==='board'?renderBoard():render();}
+}
+
+/* SAVE THOUGHT */
+function saveThought() {
+  const dump=document.getElementById('dumpInput').value.trim();
+  const summary=document.getElementById('summaryInput').value.trim();
+  const tagRaw=document.getElementById('tagInput').value.trim();
+  if(!dump&&!summary) return;
+  const tags=tagRaw?tagRaw.split(/[\s,،]+/).map(t=>t.replace(/^#/,'').trim()).filter(Boolean):[];
+  thoughts.unshift({id:Date.now(),dump,summary:summary||dump.slice(0,60),color:selectedColor,tags,groups:[...selectedGroups],expand:'',date:new Date().toLocaleDateString('ar')});
+  save();
+  document.getElementById('dumpInput').value='';
+  document.getElementById('summaryInput').value='';
+  document.getElementById('tagInput').value='';
+  selectedGroups=[];
+  renderFormGroupPills();
+  currentView==='board'?renderBoard():render();
+}
+
+function deleteThought(id){thoughts=thoughts.filter(t=>t.id!==id);save();currentView==='board'?renderBoard():render();}
+function updateExpand(id,val){const t=thoughts.find(t=>t.id===id);if(t){t.expand=val;save();}}
+
+/* LIST FILTERS */
+function setColorFilter(el) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active'); activeFilter=el.dataset.filter; activeTag=null; activeGroup=null;
+  renderTagFilters(); renderGroupFilters(); render();
+}
+function setTagFilter(tag){activeTag=activeTag===tag?null:tag;renderTagFilters();render();}
+function setGroupFilter(g){activeGroup=activeGroup===g?null:g;renderGroupFilters();render();}
+function renderTagFilters() {
+  const tags=[...new Set(thoughts.flatMap(t=>t.tags))];
+  document.getElementById('tagFilters').innerHTML=tags.map(tag=>`<span class="chip ${activeTag===tag?'active':''}" onclick="setTagFilter('${ea(tag)}')">#${esc(tag)}</span>`).join('');
+}
+function renderGroupFilters() {
+  document.getElementById('groupFilters').innerHTML=groups.map(g=>`<span class="chip ${activeGroup===g?'active':''}" onclick="setGroupFilter('${ea(g)}')">${esc(g)}</span>`).join('');
+}
+
+/* LIST RENDER */
+function render() {
+  renderTagFilters(); renderGroupFilters();
+  const container=document.getElementById('cardsContainer');
+  const empty=document.getElementById('emptyMsg');
+  let filtered=thoughts;
+  if(activeFilter!=='all') filtered=filtered.filter(t=>t.color===activeFilter);
+  if(activeTag)   filtered=filtered.filter(t=>t.tags.includes(activeTag));
+  if(activeGroup) filtered=filtered.filter(t=>(t.groups||[]).includes(activeGroup));
+  if(!filtered.length){container.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  container.innerHTML=filtered.map(t=>{
+    const grps=t.groups||[];
+    return `<div class="card ${t.color}" id="card-${t.id}">
+      <div class="card-top">
+        <div class="card-summary">${esc(t.summary)}</div>
+        <div class="ccp">
+          <div class="ccd red   ${t.color==='red'?'active':''}"    onclick="changeCardColor(${t.id},'red')"></div>
+          <div class="ccd yellow ${t.color==='yellow'?'active':''}" onclick="changeCardColor(${t.id},'yellow')"></div>
+          <div class="ccd green  ${t.color==='green'?'active':''}"  onclick="changeCardColor(${t.id},'green')"></div>
+        </div>
+      </div>
+      ${t.dump&&t.dump!==t.summary?`<div class="card-dump" id="dump-${t.id}">${esc(t.dump)}</div>`:''}
+      ${(t.tags.length||grps.length)?`<div class="card-meta">
+        ${t.tags.map(tag=>`<span class="tag">#${esc(tag)}</span>`).join('')}
+        ${grps.map(g=>`<span class="gbadge" title="اضغط لإزالة" onclick="removeGroupFromCard(${t.id},'${ea(g)}')">${esc(g)} ✕</span>`).join('')}
+      </div>`:''}
+      <div class="card-actions">
+        ${t.dump&&t.dump!==t.summary?`<button class="toggle-btn" onclick="toggleDump(${t.id})">+ dump</button>`:''}
+        <button class="toggle-btn" onclick="toggleExpand(${t.id})">+ تفاصيل</button>
+        <button class="delete-btn" onclick="deleteThought(${t.id})">حذف</button>
+      </div>
+      <textarea class="expand-area" id="expand-${t.id}" placeholder="أكمل الفكرة..." onblur="updateExpand(${t.id},this.value)">${esc(t.expand||'')}</textarea>
+    </div>`;
+  }).join('');
+}
+
+function toggleDump(id)   {document.getElementById(`dump-${id}`)?.classList.toggle('visible');}
+function toggleExpand(id) {document.getElementById(`expand-${id}`)?.classList.toggle('visible');}
+
+/* ── BOARD RENDER ── */
+function renderBoard() {
+  const container=document.getElementById('boardContainer');
+  if(!groups.length){container.innerHTML='<div class="no-groups-msg">أضف مجموعات أولاً لتظهر اللوحة</div>';return;}
+
+  // ungrouped thoughts
+  const ungrouped=thoughts.filter(t=>!(t.groups||[]).some(g=>groups.includes(g)));
+
+  const cols=[...groups.map(g=>({name:g,cards:thoughts.filter(t=>(t.groups||[]).includes(g))}))];
+  if(ungrouped.length) cols.push({name:'__ungrouped__',cards:ungrouped});
+
+  container.innerHTML=cols.map(col=>{
+    const isUngrouped=col.name==='__ungrouped__';
+    const title=isUngrouped?'بدون مجموعة':col.name;
+    const collapsed=collapsedCols.includes(col.name);
+    return `
+    <div class="column ${isUngrouped?'col-ungrouped':''}" id="col-${ea(col.name)}">
+      <div class="col-header" onclick="toggleCol('${ea(col.name)}')">
+        <span class="col-title">${esc(title)}</span>
+        <span class="col-count">${col.cards.length}</span>
+        <span class="col-toggle ${collapsed?'collapsed':''}">▾</span>
+      </div>
+      <div class="col-body ${collapsed?'collapsed':''}"
+           id="colbody-${ea(col.name)}"
+           ondragover="onDragOver(event,'${ea(col.name)}')"
+           ondragleave="onDragLeave(event)"
+           ondrop="onDrop(event,'${ea(col.name)}')">
+        ${col.cards.map(t=>boardCard(t)).join('')}
+        ${!col.cards.length?'<div style="height:30px"></div>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function boardCard(t) {
+  return `<div class="bcard ${t.color}" id="bcard-${t.id}"
+    draggable="true"
+    ondragstart="onDragStart(event,${t.id})"
+    ondragend="onDragEnd(event)">
+    <div class="bcard-summary">${esc(t.summary)}</div>
+    <div class="bcard-ccp">
+      <div class="ccd red    ${t.color==='red'?'active':''}"    onclick="changeCardColor(${t.id},'red')"></div>
+      <div class="ccd yellow ${t.color==='yellow'?'active':''}" onclick="changeCardColor(${t.id},'yellow')"></div>
+      <div class="ccd green  ${t.color==='green'?'active':''}"  onclick="changeCardColor(${t.id},'green')"></div>
+    </div>
+  </div>`;
+}
+
+function toggleCol(name) {
+  if(collapsedCols.includes(name)) collapsedCols=collapsedCols.filter(c=>c!==name);
+  else collapsedCols.push(name);
+  save(); renderBoard();
+}
+
+/* DRAG & DROP */
+function onDragStart(e, id) {
+  dragId=id;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{ const el=document.getElementById(`bcard-${id}`); if(el) el.classList.add('dragging'); },0);
+}
+function onDragEnd(e) {
+  document.querySelectorAll('.bcard').forEach(c=>c.classList.remove('dragging'));
+  document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+}
+function onDragOver(e, colName) {
+  e.preventDefault(); e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+  document.getElementById(`colbody-${colName}`)?.classList.add('drag-over');
+}
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+function onDrop(e, colName) {
+  e.preventDefault();
+  document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+  if(dragId===null) return;
+  const t=thoughts.find(t=>t.id===dragId);
+  if(!t) return;
+  if(colName==='__ungrouped__') {
+    // remove from all groups
+    t.groups=[];
+  } else {
+    // add to this group if not already there
+    if(!(t.groups||[]).includes(colName)) {
+      t.groups=[...(t.groups||[]), colName];
+    }
+  }
+  save(); dragId=null; renderBoard();
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ea(s){return String(s).replace(/'/g,"\\'").replace(/\\/g,'\\\\');}
+
+document.getElementById('dumpInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.metaKey)saveThought();});
+document.getElementById('newGroupInput').addEventListener('keydown',e=>{if(e.key==='Enter')addGroup();});
+
+renderGroupsManage(); renderFormGroupPills(); render();
+</script>
+</body>
+</html>
