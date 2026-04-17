@@ -157,6 +157,7 @@ h1 { font-size:1.1rem; font-weight:300; color:var(--muted); letter-spacing:0.05e
 .no-groups-msg { color:var(--muted); font-size:0.8rem; text-align:center; padding:20px 10px; }
 </style>
 </head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <body>
 
 <div class="header">
@@ -216,8 +217,12 @@ h1 { font-size:1.1rem; font-weight:300; color:var(--muted); letter-spacing:0.05e
 </div>
 
 <script>
-let thoughts      = JSON.parse(localStorage.getItem('thoughts2') || '[]');
-let groups        = JSON.parse(localStorage.getItem('groups2')   || '[]');
+const SUPA_URL = 'https://edqyzyekobpkqcodvfbc.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkcXl6eWVrb2Jwa3Fjb2R2ZmJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDc0MzcsImV4cCI6MjA5MjAyMzQzN30.pPQx6kq0K_lka3iaHIHxTrx2z86vLdE_AR54MNPLiSA';
+const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let thoughts      = [];
+let groups        = [];
 let collapsedCols = JSON.parse(localStorage.getItem('collapsed') || '[]');
 let selectedColor = 'red';
 let selectedGroups= [];
@@ -227,9 +232,17 @@ let activeGroup   = null;
 let currentView   = 'list';
 let dragId        = null;
 
-function save() {
-  localStorage.setItem('thoughts2', JSON.stringify(thoughts));
-  localStorage.setItem('groups2',   JSON.stringify(groups));
+async function loadData() {
+  const [tRes, gRes] = await Promise.all([
+    db.from('thoughts').select('*').order('id', {ascending: false}),
+    db.from('groups').select('name').order('position')
+  ]);
+  thoughts = (tRes.data || []).map(r => ({...r, tags: r.tags||[], groups: r.groups||[]}));
+  groups   = (gRes.data || []).map(r => r.name);
+  renderGroupsManage(); renderFormGroupPills(); render();
+}
+
+function saveCollapsed() {
   localStorage.setItem('collapsed', JSON.stringify(collapsedCols));
 }
 
@@ -251,9 +264,12 @@ function selectColor(el) {
 }
 
 /* COLOR CARD */
-function changeCardColor(id, color) {
+async function changeCardColor(id, color) {
   const t=thoughts.find(t=>t.id===id);
-  if(t){t.color=color; save(); currentView==='board'?renderBoard():render();}
+  if(!t) return;
+  t.color=color;
+  await db.from('thoughts').update({color}).eq('id', id);
+  currentView==='board'?renderBoard():render();
 }
 
 /* GROUPS MANAGE */
@@ -261,18 +277,24 @@ function toggleManageGroups() {
   const el=document.getElementById('manageGroups');
   el.style.display=el.style.display==='none'?'block':'none';
 }
-function addGroup() {
+async function addGroup() {
   const input=document.getElementById('newGroupInput');
   const name=input.value.trim();
   if(!name||groups.includes(name)) return;
-  groups.push(name); save(); input.value='';
+  await db.from('groups').insert({name, position: groups.length});
+  groups.push(name);
+  input.value='';
   renderGroupsManage(); renderFormGroupPills(); renderGroupFilters();
   if(currentView==='board') renderBoard();
 }
-function deleteGroup(name) {
+async function deleteGroup(name) {
+  await db.from('groups').delete().eq('name', name);
   groups=groups.filter(g=>g!==name);
-  thoughts.forEach(t=>{t.groups=(t.groups||[]).filter(g=>g!==name);});
-  save();
+  const affected=thoughts.filter(t=>(t.groups||[]).includes(name));
+  for(const t of affected){
+    t.groups=t.groups.filter(g=>g!==name);
+    await db.from('thoughts').update({groups: t.groups}).eq('id', t.id);
+  }
   renderGroupsManage(); renderFormGroupPills(); renderGroupFilters();
   currentView==='board'?renderBoard():render();
 }
@@ -292,20 +314,24 @@ function toggleFormGroup(name) {
 }
 
 /* REMOVE GROUP FROM CARD */
-function removeGroupFromCard(id, groupName) {
+async function removeGroupFromCard(id, groupName) {
   const t=thoughts.find(t=>t.id===id);
-  if(t){t.groups=(t.groups||[]).filter(g=>g!==groupName);save();currentView==='board'?renderBoard():render();}
+  if(!t) return;
+  t.groups=t.groups.filter(g=>g!==groupName);
+  await db.from('thoughts').update({groups: t.groups}).eq('id', id);
+  currentView==='board'?renderBoard():render();
 }
 
 /* SAVE THOUGHT */
-function saveThought() {
+async function saveThought() {
   const dump=document.getElementById('dumpInput').value.trim();
   const summary=document.getElementById('summaryInput').value.trim();
   const tagRaw=document.getElementById('tagInput').value.trim();
   if(!dump&&!summary) return;
   const tags=tagRaw?tagRaw.split(/[\s,،]+/).map(t=>t.replace(/^#/,'').trim()).filter(Boolean):[];
-  thoughts.unshift({id:Date.now(),dump,summary:summary||dump.slice(0,60),color:selectedColor,tags,groups:[...selectedGroups],expand:'',date:new Date().toLocaleDateString('ar')});
-  save();
+  const newThought={id:Date.now(),dump,summary:summary||dump.slice(0,60),color:selectedColor,tags,groups:[...selectedGroups],expand:'',date:new Date().toLocaleDateString('ar')};
+  const {error}=await db.from('thoughts').insert(newThought);
+  if(!error) thoughts.unshift(newThought);
   document.getElementById('dumpInput').value='';
   document.getElementById('summaryInput').value='';
   document.getElementById('tagInput').value='';
@@ -314,8 +340,15 @@ function saveThought() {
   currentView==='board'?renderBoard():render();
 }
 
-function deleteThought(id){thoughts=thoughts.filter(t=>t.id!==id);save();currentView==='board'?renderBoard():render();}
-function updateExpand(id,val){const t=thoughts.find(t=>t.id===id);if(t){t.expand=val;save();}}
+async function deleteThought(id){
+  await db.from('thoughts').delete().eq('id', id);
+  thoughts=thoughts.filter(t=>t.id!==id);
+  currentView==='board'?renderBoard():render();
+}
+async function updateExpand(id,val){
+  const t=thoughts.find(t=>t.id===id);
+  if(t){t.expand=val; await db.from('thoughts').update({expand:val}).eq('id',id);}
+}
 
 /* LIST FILTERS */
 function setColorFilter(el) {
@@ -378,9 +411,7 @@ function renderBoard() {
   const container=document.getElementById('boardContainer');
   if(!groups.length){container.innerHTML='<div class="no-groups-msg">أضف مجموعات أولاً لتظهر اللوحة</div>';return;}
 
-  // ungrouped thoughts
   const ungrouped=thoughts.filter(t=>!(t.groups||[]).some(g=>groups.includes(g)));
-
   const cols=[...groups.map(g=>({name:g,cards:thoughts.filter(t=>(t.groups||[]).includes(g))}))];
   if(ungrouped.length) cols.push({name:'__ungrouped__',cards:ungrouped});
 
@@ -424,7 +455,7 @@ function boardCard(t) {
 function toggleCol(name) {
   if(collapsedCols.includes(name)) collapsedCols=collapsedCols.filter(c=>c!==name);
   else collapsedCols.push(name);
-  save(); renderBoard();
+  saveCollapsed(); renderBoard();
 }
 
 /* DRAG & DROP */
@@ -445,22 +476,19 @@ function onDragOver(e, colName) {
 function onDragLeave(e) {
   e.currentTarget.classList.remove('drag-over');
 }
-function onDrop(e, colName) {
+async function onDrop(e, colName) {
   e.preventDefault();
   document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
   if(dragId===null) return;
   const t=thoughts.find(t=>t.id===dragId);
   if(!t) return;
   if(colName==='__ungrouped__') {
-    // remove from all groups
     t.groups=[];
   } else {
-    // add to this group if not already there
-    if(!(t.groups||[]).includes(colName)) {
-      t.groups=[...(t.groups||[]), colName];
-    }
+    if(!(t.groups||[]).includes(colName)) t.groups=[...(t.groups||[]), colName];
   }
-  save(); dragId=null; renderBoard();
+  await db.from('thoughts').update({groups: t.groups}).eq('id', t.id);
+  dragId=null; renderBoard();
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -469,7 +497,7 @@ function ea(s){return String(s).replace(/'/g,"\\'").replace(/\\/g,'\\\\');}
 document.getElementById('dumpInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.metaKey)saveThought();});
 document.getElementById('newGroupInput').addEventListener('keydown',e=>{if(e.key==='Enter')addGroup();});
 
-renderGroupsManage(); renderFormGroupPills(); render();
+loadData();
 </script>
 </body>
 </html>
